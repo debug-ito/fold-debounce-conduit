@@ -38,14 +38,14 @@ import qualified Data.Conduit.List as CL
 -- | Debounce conduit 'Source' with "Control.FoldDebounce". The data
 -- stream from the original 'Source' (type @i@) is debounced and
 -- folded into the data stream of the type @o@.
-debounceSource :: (MonadThrow m, MonadBase IO m, MonadIO m, Applicative m, MonadBaseControl IO m)
-                  => Args i o -- ^ mandatory argument for
-                              -- FoldDebounce. 'cb' field is ignored,
-                              -- so you can set anything to that.
-                  -> Opts i o -- ^ optional argument for FoldDebounce
-                  -> Source m i -- ^ original 'Source'
-                  -> Source m o -- ^ debounced 'Source'
-debounceSource = undefined
+debounce :: (MonadThrow m, MonadBase IO m, MonadIO m, Applicative m, MonadBaseControl IO m)
+            => Args i o -- ^ mandatory argument for FoldDebounce. 'cb'
+                        -- field is ignored, so you can set anything
+                        -- to that.
+            -> Opts i o -- ^ optional argument for FoldDebounce
+            -> Source m i -- ^ original 'Source'
+            -> Source m o -- ^ debounced 'Source'
+debounce = undefined
 
 -- | 'Args' for stacks. Input events are accumulated in a stack, i.e.,
 -- the last event is at the head of the list.
