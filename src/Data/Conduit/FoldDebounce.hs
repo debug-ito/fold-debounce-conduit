@@ -1,6 +1,6 @@
 -- |
 -- Module: Data.Conduit.FoldDebounce
--- Description: Debounce conduit Source with Control.FoldDebounce
+-- Description: Regulate input traffic from conduit Source with Control.FoldDebounce
 -- Maintainer: Toshio Ito <debug.ito@gmail.com>
 -- 
 module Data.Conduit.FoldDebounce (

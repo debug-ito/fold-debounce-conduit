@@ -1,6 +1,6 @@
 # fold-debounce-conduit
 
-Debounce conduit Source with Control.FoldDebounce
+Regulate input traffic from conduit Source with Control.FoldDebounce
 
 ## How to run tests
 
