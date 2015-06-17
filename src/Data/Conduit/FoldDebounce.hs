@@ -3,8 +3,21 @@
 -- Description: Regulate input traffic from conduit Source with Control.FoldDebounce
 -- Maintainer: Toshio Ito <debug.ito@gmail.com>
 -- 
+-- Synopsis:
+--
+-- > TODO
+--
+-- This module regulates (slows down) data stream from conduit
+-- 'Source' using "Control.FoldDebounce".
+--
+-- The data from the original 'Source' (type @i@) are pulled and
+-- folded together to create an output data (type @o@). The output
+-- data then comes out of the debounced 'Source' in a predefined
+-- interval (specified by 'alwaysResetTimer' option).
+--
+-- See "Control.FoldDebounce" for detail.
 module Data.Conduit.FoldDebounce (
-  debounceSource,
+  debounce,
   -- * Re-exports
   Args(..),
   Opts,
