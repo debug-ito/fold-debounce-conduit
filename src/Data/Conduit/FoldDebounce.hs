@@ -63,10 +63,10 @@ debounce args opts src = do
           OutFinished -> return ()
           OutData got -> yield got >> retSource
   lift $ runResourceT $ do
+    void $ register $ atomically $ writeTChan out_chan OutFinished
     (_, trig) <- allocate (F.new args { F.cb = atomically . writeTChan out_chan . OutData }
                                  opts)
                           (F.close)
-    void $ register $ atomically $ writeTChan out_chan OutFinished
     void $ resourceForkIO $ lift (src $$ trigSink trig)
   retSource
 
