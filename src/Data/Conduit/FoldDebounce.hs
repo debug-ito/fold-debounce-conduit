@@ -45,9 +45,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan, atomically)
 
-import Control.Concurrent (threadDelay)
-import qualified Data.Conduit.List as CL
-
 -- | Debounce conduit 'Source' with "Control.FoldDebounce". The data
 -- stream from the original 'Source' (type @i@) is debounced and
 -- folded into the data stream of the type @o@.
@@ -58,7 +55,35 @@ debounce :: (MonadThrow m, MonadBase IO m, MonadIO m, Applicative m, MonadBaseCo
             -> Opts i o -- ^ optional argument for FoldDebounce
             -> Source m i -- ^ original 'Source'
             -> Source m o -- ^ debounced 'Source'
-debounce = undefined
+debounce args opts src = do
+  out_chan <- liftIO $ newTChanIO
+  let retSource = do
+        mgot <- liftIO $ atomically $ readTChan out_chan
+        case mgot of
+          OutFinished -> return ()
+          OutData got -> yield got >> retSource
+  lift $ runResourceT $ do
+    (_, trig) <- allocate (F.new args { F.cb = atomically . writeTChan out_chan . OutData }
+                                 opts)
+                          (F.close)
+    void $ register $ atomically $ writeTChan out_chan OutFinished
+    void $ resourceForkIO $ lift (src $$ trigSink trig)
+  retSource
+
+-- | Internal data type for output channel.
+data OutData o = OutData o
+               | OutFinished
+
+trigSink :: (MonadIO m) => F.Trigger i o -> Sink i m ()
+trigSink trig = trigSink' where
+  trigSink' = do
+    mgot <- await
+    case mgot of
+      Nothing -> return ()
+      Just got -> do
+        liftIO $ F.send trig got
+        trigSink'
+
 
 -- | 'Args' for stacks. Input events are accumulated in a stack, i.e.,
 -- the last event is at the head of the list.
