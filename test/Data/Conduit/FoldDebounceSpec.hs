@@ -4,11 +4,13 @@ import Test.Hspec
 
 import Data.Monoid (Monoid)
 import Control.Concurrent (threadDelay)
+import Control.Monad (forM_)
 import System.Timeout (timeout)
 import qualified Data.Conduit.FoldDebounce as F
-import Data.Conduit (Source, ($$), yield)
+import Data.Conduit (Source, ($$), yield, addCleanup)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Conduit.List as CL
+import Control.Concurrent.STM (atomically, newTVarIO, writeTVar, readTVar)
 
 main :: IO ()
 main = hspec spec
@@ -42,3 +44,11 @@ spec = do
     it "should terminate debounced Source immediately if the original Source terminates immediately" $ do
       ret <- timeout 50000000 $ debMonoid 60000000 (CL.sourceList ["A", "B", "C", "D", "E"]) $$ CL.consume
       ret `shouldBe` Just ["ABCDE"]
+    it "should terminate the Sink for the original Source if the Sink for the debounced Source terminates" $ do
+      terminated <- newTVarIO False
+      let finalize = addCleanup (\completion -> if not completion then atomically $ writeTVar terminated True else return () )
+          orig_source = finalize $ periodicSource 10000 (repeat "a")
+      ret <- debMonoid 50000 orig_source $$ CL.take 4
+      length ret `shouldBe` 4
+      forM_ ret (`shouldContain` "aaa")
+      atomically (readTVar terminated) `shouldReturn` True
