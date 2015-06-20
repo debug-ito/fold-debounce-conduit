@@ -35,6 +35,6 @@ spec = do
       ret <- debSum 500000 (periodicSource 10000 [1..10]) $$ CL.consume
       ret `shouldBe` [sum [1..10]]
     it "should debounce source" $ do
-      let s = delayedSource [(1000, "a"), (1000, "b"), (200000, "c"), (1000, "d"), (1000, "e")]
+      let s = delayedSource [(1000, "a"), (1000, "b"), (200000, "c"), (1000, "d"), (1000, "e"), (200000, "f")]
       ret <- debMonoid 100000 s $$ CL.consume
-      ret `shouldBe` ["ab", "cde"]
+      ret `shouldBe` ["ab", "cde", "f"]
