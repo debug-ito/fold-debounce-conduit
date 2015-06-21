@@ -24,10 +24,10 @@ printSink = CL.mapM_ (liftIO . putStrLn . show)
 main :: IO ()
 main = do
   putStrLn "-- Before debounce"
-  runResourceT $ fastSource 20 $$ printSink
-  let debouncer = F.debounce F.Args { F.cb = undefined, -- not used
+  runResourceT $ fastSource 10 $$ printSink
+  let debouncer = F.debounce F.Args { F.cb = undefined, -- anything will do
                                       F.fold = (\list num -> list ++ [num]),
                                       F.init = [] }
                              F.def { F.delay = 500000 }
   putStrLn "-- After debounce"
-  runResourceT $ debouncer (fastSource 20) $$ printSink
+  runResourceT $ debouncer (fastSource 10) $$ printSink
