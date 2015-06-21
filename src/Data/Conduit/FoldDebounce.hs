@@ -37,13 +37,15 @@ import Data.Monoid (Monoid)
 import Control.FoldDebounce (Args(Args,cb,fold,init),
                              Opts, delay, alwaysResetTimer, def)
 import qualified Control.FoldDebounce as F
-import Data.Conduit (Source, Sink, await, yield, ($$))
+import Data.Conduit (Source, Sink, await, yieldOr, ($$))
 import Control.Monad.Base (MonadBase)
 import Control.Monad.Trans.Resource (MonadBaseControl, MonadThrow, 
                                      allocate, register, resourceForkIO, runResourceT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan, atomically)
+import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan,
+                               atomically,
+                               TVar, readTVar, newTVarIO, writeTVar)
 
 -- | Debounce conduit 'Source' with "Control.FoldDebounce". The data
 -- stream from the original 'Source' (type @i@) is debounced and
@@ -57,30 +59,33 @@ debounce :: (MonadThrow m, MonadBase IO m, MonadIO m, Applicative m, MonadBaseCo
             -> Source m o -- ^ debounced 'Source'
 debounce args opts src = do
   out_chan <- liftIO $ newTChanIO
+  out_termed <- liftIO $ newTVarIO False
   let retSource = do
         mgot <- liftIO $ atomically $ readTChan out_chan
         case mgot of
           OutFinished -> return ()
-          OutData got -> yield got >> retSource
+          OutData got -> yieldOr got (liftIO $ atomically $ writeTVar out_termed True) >> retSource
   lift $ runResourceT $ do
     void $ register $ atomically $ writeTChan out_chan OutFinished
     (_, trig) <- allocate (F.new args { F.cb = atomically . writeTChan out_chan . OutData }
                                  opts)
                           (F.close)
-    void $ resourceForkIO $ lift (src $$ trigSink trig)
+    void $ resourceForkIO $ lift (src $$ trigSink trig out_termed)
   retSource
 
 -- | Internal data type for output channel.
 data OutData o = OutData o
                | OutFinished
 
-trigSink :: (MonadIO m) => F.Trigger i o -> Sink i m ()
-trigSink trig = trigSink' where
+trigSink :: (MonadIO m) => F.Trigger i o -> TVar Bool -> Sink i m ()
+trigSink trig out_termed = trigSink' where
   trigSink' = do
     mgot <- await
-    case mgot of
-      Nothing -> return ()
-      Just got -> do
+    termed <- liftIO $ atomically $ readTVar out_termed
+    case (termed, mgot) of
+      (True, _) -> return ()
+      (False, Nothing) -> return ()
+      (False, Just got) -> do
         liftIO $ F.send trig got
         trigSink'
 
