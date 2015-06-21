@@ -5,14 +5,14 @@ import Test.Hspec
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid)
 import Control.Concurrent (threadDelay, myThreadId)
-import Control.Monad (forM_)
+import Control.Monad (forM_, void)
 import System.Timeout (timeout)
 import qualified Data.Conduit.FoldDebounce as F
 import Data.Conduit (Source, ConduitM, ($$), yield, addCleanup)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Conduit.List as CL
 import Control.Concurrent.STM (atomically, TVar, newTVarIO, writeTVar, readTVar)
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import Control.Monad.Trans.Resource (ResourceT, runResourceT, register)
 
 main :: IO ()
 main = hspec spec
@@ -32,6 +32,14 @@ terminationDetector = do
   terminated <- newTVarIO False
   return (terminated,
           addCleanup (\completed -> if not completed then liftIO $ atomically $ writeTVar terminated True else return () ) )
+
+attachResource :: Source (ResourceT IO) a -> IO (TVar Bool, Source (ResourceT IO) a)
+attachResource src = do
+  released <- newTVarIO False
+  let src' = do
+        void $ register $ atomically $ writeTVar released True
+        src
+  return (released, src')
 
 debSum :: Int -> Source (ResourceT IO) Int -> Source (ResourceT IO) Int
 debSum delay = F.debounce F.Args { F.init = 0, F.fold = (+), F.cb = undefined } F.def { F.delay = delay }
@@ -64,7 +72,7 @@ spec = do
       let s = (periodicSource 1000 ["a", "b"]) >> error "Exception in origSource" >> (periodicSource 1000 ["c", "d"])
       ret <- runResourceT $ debMonoid 100000 s $$ CL.consume
       ret `shouldBe` ["ab"]
-    it "should terminated the original Source gracefully if the Sink for debounced Source throws exception" $ do
+    it "should terminated the original Source gracefully if the downstream Sink throws exception" $ do
       (terminated, detector) <- terminationDetector
       let orig_source = detector $ periodicSource 10000 (repeat "a")
           ret_sink = do
@@ -86,3 +94,24 @@ spec = do
       orig_thread <- atomically (readTVar orig_thread_t)
       orig_thread `shouldSatisfy` isJust
       orig_thread `shouldSatisfy` (/= Just this_thread)
+    it "should release the resource in the original Source when the original Source finishes" $ do
+      (released, orig_source) <- attachResource $ periodicSource 10000 [1,2,3,4]
+      ret <- runResourceT $ debSum 500000 orig_source $$ CL.consume
+      ret `shouldBe` [10]
+      atomically (readTVar released) `shouldReturn` True
+    it "should release the resource in the original Source when the downstream Sink throws exception" $ do
+      (released, orig_source) <- attachResource $ periodicSource 10000 $ repeat "a"
+      let sink = do
+            taken <- CL.take 4
+            _ <- error "Exception in downstream"
+            return taken
+      runResourceT (debMonoid 500000 orig_source $$ sink) `shouldThrow` errorCall "Exception in downstream"
+      threadDelay 20000
+      atomically (readTVar released) `shouldReturn` True
+    it "should release the resource in the original Source when the original Source throws exception" $ do
+      (released, orig_source) <- attachResource (periodicSource 10000 ["a", "b"] >> error "Exception in source")
+      ret <- runResourceT $ debMonoid 500000 orig_source $$ CL.consume
+      ret `shouldBe` ["ab"]
+      atomically (readTVar released) `shouldReturn` True
+
+      
