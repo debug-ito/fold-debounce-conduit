@@ -30,7 +30,6 @@ module Data.Conduit.FoldDebounce (
 ) where
 
 import Prelude hiding (init)
-import Control.Applicative (Applicative)
 import Control.Monad (void)
 import Data.Monoid (Monoid)
 
@@ -38,9 +37,8 @@ import Control.FoldDebounce (Args(Args,cb,fold,init),
                              Opts, delay, alwaysResetTimer, def)
 import qualified Control.FoldDebounce as F
 import Data.Conduit (Source, Sink, await, yieldOr, ($$))
-import Control.Monad.Base (MonadBase)
-import Control.Monad.Trans.Resource (MonadBaseControl, MonadThrow, 
-                                     allocate, register, resourceForkIO, runResourceT)
+import Control.Monad.Trans.Resource (MonadResource, MonadBaseControl,
+                                     allocate, register, release, resourceForkIO, runResourceT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan,
@@ -50,7 +48,7 @@ import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan,
 -- | Debounce conduit 'Source' with "Control.FoldDebounce". The data
 -- stream from the original 'Source' (type @i@) is debounced and
 -- folded into the data stream of the type @o@.
-debounce :: (MonadThrow m, MonadBase IO m, MonadIO m, Applicative m, MonadBaseControl IO m)
+debounce :: (MonadResource m, MonadBaseControl IO m)
             => Args i o -- ^ mandatory argument for FoldDebounce. 'cb'
                         -- field is ignored, so you can set anything
                         -- to that.
@@ -59,12 +57,12 @@ debounce :: (MonadThrow m, MonadBase IO m, MonadIO m, Applicative m, MonadBaseCo
             -> Source m o -- ^ debounced 'Source'
 debounce args opts src = do
   out_chan <- liftIO $ newTChanIO
-  out_termed <- liftIO $ newTVarIO False
+  (out_termed_key, out_termed) <- allocate (liftIO $ newTVarIO False) (liftIO . atomically . flip writeTVar True)
   let retSource = do
         mgot <- liftIO $ atomically $ readTChan out_chan
         case mgot of
           OutFinished -> return ()
-          OutData got -> yieldOr got (liftIO $ atomically $ writeTVar out_termed True) >> retSource
+          OutData got -> yieldOr got (release out_termed_key) >> retSource
   lift $ runResourceT $ do
     void $ register $ atomically $ writeTChan out_chan OutFinished
     (_, trig) <- allocate (F.new args { F.cb = atomically . writeTChan out_chan . OutData }
