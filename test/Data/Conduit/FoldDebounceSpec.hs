@@ -51,4 +51,5 @@ spec = do
       ret <- debMonoid 50000 orig_source $$ CL.take 4
       length ret `shouldBe` 4
       forM_ ret (`shouldContain` "aaa")
+      threadDelay 20000
       atomically (readTVar terminated) `shouldReturn` True
