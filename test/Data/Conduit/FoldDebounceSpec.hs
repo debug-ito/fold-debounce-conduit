@@ -2,8 +2,9 @@ module Data.Conduit.FoldDebounceSpec (main, spec) where
 
 import Test.Hspec
 
+import Data.Maybe (isJust)
 import Data.Monoid (Monoid)
-import Control.Concurrent (threadDelay)
+import Control.Concurrent (threadDelay, myThreadId)
 import Control.Monad (forM_)
 import System.Timeout (timeout)
 import qualified Data.Conduit.FoldDebounce as F
@@ -73,3 +74,15 @@ spec = do
       runResourceT (debMonoid 50000 orig_source $$ ret_sink) `shouldThrow` errorCall "Exception in retSink"
       threadDelay 20000
       atomically (readTVar terminated) `shouldReturn` True
+    it "should connect the original Source in another thread" $ do
+      this_thread <- myThreadId
+      orig_thread_t <- newTVarIO Nothing
+      let orig_source = do
+            liftIO $ atomically . writeTVar orig_thread_t . Just =<< myThreadId
+            yield 10
+            return ()
+      ret <- runResourceT $ debSum 10000 orig_source $$ CL.consume
+      ret `shouldBe` [10]
+      orig_thread <- atomically (readTVar orig_thread_t)
+      orig_thread `shouldSatisfy` isJust
+      orig_thread `shouldSatisfy` (/= Just this_thread)

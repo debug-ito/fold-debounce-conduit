@@ -48,6 +48,10 @@ import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan,
 -- | Debounce conduit 'Source' with "Control.FoldDebounce". The data
 -- stream from the original 'Source' (type @i@) is debounced and
 -- folded into the data stream of the type @o@.
+--
+-- Note that the original 'Source' is connected to a 'Sink' in another
+-- thread. You may need some synchronization if the original 'Source'
+-- has side-effects.
 debounce :: (MonadResource m, MonadBaseControl IO m)
             => Args i o -- ^ mandatory argument for FoldDebounce. 'cb'
                         -- field is ignored, so you can set anything
