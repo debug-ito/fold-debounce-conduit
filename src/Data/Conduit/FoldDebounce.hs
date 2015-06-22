@@ -64,7 +64,7 @@
 -- The data from the original 'Source' (type @i@) are pulled and
 -- folded together to create an output data (type @o@). The output
 -- data then comes out of the debounced 'Source' in a predefined
--- interval (specified by 'alwaysResetTimer' option).
+-- interval (specified by 'delay' option).
 --
 -- See "Control.FoldDebounce" for detail.
 module Data.Conduit.FoldDebounce (
@@ -72,10 +72,10 @@ module Data.Conduit.FoldDebounce (
   -- * Re-exports
   Args(..),
   Opts,
+  def,
   -- ** Accessors for 'Opts'
   delay,
   alwaysResetTimer,
-  def,
   -- * Preset parameters
   forStack, forMonoid, forVoid
 ) where
