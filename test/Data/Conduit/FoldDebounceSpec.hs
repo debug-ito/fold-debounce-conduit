@@ -69,6 +69,9 @@ spec = do
       threadDelay 20000
       atomically (readTVar terminated) `shouldReturn` True
     it "should terminate the debounced Source gracefully if the original Source throws exception" $ do
+      -- For now, the exception in the original Source is not handled,
+      -- i.e., we just let it terminate the thread. So we'll see the
+      -- error message while running the test.
       let s = (periodicSource 1000 ["a", "b"]) >> error "Exception in origSource" >> (periodicSource 1000 ["c", "d"])
       ret <- runResourceT $ debMonoid 100000 s $$ CL.consume
       ret `shouldBe` ["ab"]
@@ -109,6 +112,9 @@ spec = do
       threadDelay 20000
       atomically (readTVar released) `shouldReturn` True
     it "should release the resource in the original Source when the original Source throws exception" $ do
+      -- Because the error is not handled, we'll see the error message
+      -- while running the test. (See above for the case "original
+      -- Source throwing exception")
       (released, orig_source) <- attachResource (periodicSource 10000 ["a", "b"] >> error "Exception in source")
       ret <- runResourceT $ debMonoid 500000 orig_source $$ CL.consume
       ret `shouldBe` ["ab"]
