@@ -25,7 +25,7 @@ library
                         fold-debounce >=0.2.0 && <0.3,
                         resourcet >=1.1.5 && <1.2,
                         stm >=2.4.4 && <2.5,
-                        transformers >=0.3.0 && <0.5,
+                        transformers >=0.3.0 && <0.6,
                         transformers-base >=0.4.4 && <0.5
 
 -- executable fold-debounce-conduit
@@ -46,7 +46,7 @@ test-suite spec
   other-modules:        Data.Conduit.FoldDebounceSpec
   build-depends:        base, fold-debounce-conduit, stm,
                         conduit, transformers, resourcet,
-                        hspec >=2.1.7 && <2.2
+                        hspec >=2.1.7 && <2.3
 
 source-repository head
   type:                 git
