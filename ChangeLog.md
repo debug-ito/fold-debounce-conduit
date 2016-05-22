@@ -1,5 +1,10 @@
 # Revision history for fold-debounce-conduit
 
+## 0.1.0.2  -- 2016-05-22
+
+* Confirmed build with base-4.9.0.0
+
+
 ## 0.1.0.1  -- 2016-05-03
 
 * Bump dependency version upper bounds.
