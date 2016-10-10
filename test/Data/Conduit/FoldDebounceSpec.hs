@@ -2,17 +2,18 @@ module Data.Conduit.FoldDebounceSpec (main, spec) where
 
 import Test.Hspec
 
+import Control.Applicative ((<$>))
+import Control.Concurrent (threadDelay, myThreadId)
+import Control.Concurrent.STM (atomically, TVar, newTVarIO, writeTVar, readTVar, retry)
+import Control.Monad (forM_, void)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Resource (ResourceT, runResourceT, register)
+import Data.Conduit (Source, ConduitM, ($$), yield, addCleanup)
+import qualified Data.Conduit.FoldDebounce as F
+import qualified Data.Conduit.List as CL
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid)
-import Control.Concurrent (threadDelay, myThreadId)
-import Control.Monad (forM_, void)
 import System.Timeout (timeout)
-import qualified Data.Conduit.FoldDebounce as F
-import Data.Conduit (Source, ConduitM, ($$), yield, addCleanup)
-import Control.Monad.IO.Class (liftIO)
-import qualified Data.Conduit.List as CL
-import Control.Concurrent.STM (atomically, TVar, newTVarIO, writeTVar, readTVar)
-import Control.Monad.Trans.Resource (ResourceT, runResourceT, register)
 
 main :: IO ()
 main = hspec spec
@@ -47,6 +48,18 @@ debSum delay = F.debounce F.Args { F.init = 0, F.fold = (+), F.cb = undefined } 
 debMonoid :: Monoid i => Int -> Source (ResourceT IO) i -> Source (ResourceT IO) i
 debMonoid delay = F.debounce F.forMonoid F.def { F.delay = delay }
 
+shouldSatisfyEventually :: Int -> TVar a -> (a -> Bool) -> IO ()
+shouldSatisfyEventually timeout_usec got predicate = do
+  eventually_got <- timeout timeout_usec $ atomically $ doCheck
+  fmap predicate eventually_got `shouldBe` Just True
+  where
+    doCheck = do
+      ret <- readTVar got
+      if predicate ret then return ret else retry
+
+shouldSatisfyEventually' :: TVar a -> (a -> Bool) -> IO ()
+shouldSatisfyEventually' = shouldSatisfyEventually 20000000
+
 spec :: Spec
 spec = do
   describe "debounce" $ do
@@ -65,9 +78,8 @@ spec = do
       let orig_source = detector $ periodicSource 10000 (repeat "a")
       ret <- runResourceT $ debMonoid 50000 orig_source $$ CL.take 4
       length ret `shouldBe` 4
-      forM_ ret (`shouldContain` "aaa")
-      threadDelay 20000
-      atomically (readTVar terminated) `shouldReturn` True
+      forM_ ret (`shouldContain` "a")
+      terminated `shouldSatisfyEventually'` (== True)
     it "should terminate the debounced Source gracefully if the original Source throws exception" $ do
       -- For now, the exception in the original Source is not handled,
       -- i.e., we just let it terminate the thread. So we'll see the
@@ -83,8 +95,7 @@ spec = do
             _ <- error "Exception in retSink"
             return taken
       runResourceT (debMonoid 50000 orig_source $$ ret_sink) `shouldThrow` errorCall "Exception in retSink"
-      threadDelay 20000
-      atomically (readTVar terminated) `shouldReturn` True
+      terminated `shouldSatisfyEventually'` (== True)
     it "should connect the original Source in another thread" $ do
       this_thread <- myThreadId
       orig_thread_t <- newTVarIO Nothing
@@ -101,7 +112,7 @@ spec = do
       (released, orig_source) <- attachResource $ periodicSource 10000 [1,2,3,4]
       ret <- runResourceT $ debSum 500000 orig_source $$ CL.consume
       ret `shouldBe` [10]
-      atomically (readTVar released) `shouldReturn` True
+      released `shouldSatisfyEventually'` (== True)
     it "should release the resource in the original Source when the downstream Sink throws exception" $ do
       (released, orig_source) <- attachResource $ periodicSource 10000 $ repeat "a"
       let sink = do
@@ -109,8 +120,7 @@ spec = do
             _ <- error "Exception in downstream"
             return taken
       runResourceT (debMonoid 500000 orig_source $$ sink) `shouldThrow` errorCall "Exception in downstream"
-      threadDelay 20000
-      atomically (readTVar released) `shouldReturn` True
+      released `shouldSatisfyEventually'` (== True)
     it "should release the resource in the original Source when the original Source throws exception" $ do
       -- Because the error is not handled, we'll see the error message
       -- while running the test. (See above for the case "original
@@ -118,6 +128,6 @@ spec = do
       (released, orig_source) <- attachResource (periodicSource 10000 ["a", "b"] >> error "Exception in source")
       ret <- runResourceT $ debMonoid 500000 orig_source $$ CL.consume
       ret `shouldBe` ["ab"]
-      atomically (readTVar released) `shouldReturn` True
+      released `shouldSatisfyEventually'` (== True)
 
       
