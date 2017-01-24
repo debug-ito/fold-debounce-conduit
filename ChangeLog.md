@@ -1,5 +1,10 @@
 # Revision history for fold-debounce-conduit
 
+## 0.1.0.5  -- 2017-01-24
+
+* Confirmed test with `hspec-2.4.0`
+
+
 ## 0.1.0.4  -- 2016-10-10
 
 * Make the tests more stable.
