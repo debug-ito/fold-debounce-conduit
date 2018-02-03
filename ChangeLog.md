@@ -1,5 +1,15 @@
 # Revision history for fold-debounce-conduit
 
+## 0.2.0.0  -- 2018-02-03
+
+* Support `conduit-1.3.0` and `resourcet-1.2.0`. This causes major
+  update of this package, too.
+* Drop support for old GHCs and old dependency packages, to support
+  the latest `conduit` and `resourcet`.
+* Drop version upper bounds for `hspec`, because it's stable in most
+  part.
+
+
 ## 0.1.0.5  -- 2017-01-24
 
 * Confirmed test with `hspec-2.4.0`
