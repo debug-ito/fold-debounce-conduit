@@ -87,8 +87,8 @@ import Data.Monoid (Monoid)
 import Control.FoldDebounce (Args(Args,cb,fold,init),
                              Opts, delay, alwaysResetTimer, def)
 import qualified Control.FoldDebounce as F
-import Data.Conduit (Source, Sink, await, yieldOr, ($$))
-import Control.Monad.Trans.Resource (MonadResource, MonadBaseControl,
+import Data.Conduit (Source, Sink, await, ($$), bracketP, yield)
+import Control.Monad.Trans.Resource (MonadResource, MonadUnliftIO,
                                      allocate, register, release, resourceForkIO, runResourceT)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -103,29 +103,32 @@ import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan,
 -- Note that the original 'Source' is connected to a 'Sink' in another
 -- thread. You may need some synchronization if the original 'Source'
 -- has side-effects.
-debounce :: (MonadResource m, MonadBaseControl IO m)
+debounce :: (MonadResource m, MonadUnliftIO m)
             => Args i o -- ^ mandatory argument for FoldDebounce. 'cb'
                         -- field is ignored, so you can set anything
                         -- to that.
             -> Opts i o -- ^ optional argument for FoldDebounce
             -> Source m i -- ^ original 'Source'
             -> Source m o -- ^ debounced 'Source'
-debounce args opts src = do
-  out_chan <- liftIO $ newTChanIO
-  (out_termed_key, out_termed) <- allocate (liftIO $ newTVarIO False) (liftIO . atomically . flip writeTVar True)
-  let retSource = do
-        mgot <- liftIO $ atomically $ readTChan out_chan
-        case mgot of
-          OutFinished -> return ()
-          OutData got -> yieldOr got (release out_termed_key) >> retSource
-  lift $ runResourceT $ do
-    void $ register $ atomically $ writeTChan out_chan OutFinished
-    (_, trig) <- allocate (F.new args { F.cb = atomically . writeTChan out_chan . OutData }
-                                 opts)
-                          (F.close)
-    void $ resourceForkIO $ lift (src $$ trigSink trig out_termed)
-  retSource
-
+debounce args opts src = bracketP initOutTermed finishOutTermed debounceWith
+  where
+    initOutTermed = newTVarIO False
+    finishOutTermed = atomically . flip writeTVar True
+    debounceWith out_termed = do
+      out_chan <- liftIO $ newTChanIO
+      lift $ runResourceT $ do
+        void $ register $ atomically $ writeTChan out_chan OutFinished
+        (_, trig) <- allocate (F.new args { F.cb = atomically . writeTChan out_chan . OutData }
+                                     opts)
+                              (F.close)
+        void $ resourceForkIO $ lift (src $$ trigSink trig out_termed)
+      keepYield out_chan
+    keepYield out_chan = do
+      mgot <- liftIO $ atomically $ readTChan out_chan
+      case mgot of
+       OutFinished -> return ()
+       OutData got -> yield got >> keepYield out_chan
+      
 -- | Internal data type for output channel.
 data OutData o = OutData o
                | OutFinished

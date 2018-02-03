@@ -8,7 +8,7 @@ import Control.Concurrent.STM (atomically, TVar, newTVarIO, writeTVar, readTVar,
 import Control.Monad (forM_, void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Resource (ResourceT, runResourceT, register)
-import Data.Conduit (Source, ConduitM, ($$), yield, addCleanup)
+import Data.Conduit (Source, ConduitM, ($$), yield, bracketP)
 import qualified Data.Conduit.FoldDebounce as F
 import qualified Data.Conduit.List as CL
 import Data.Maybe (isJust)
@@ -31,8 +31,18 @@ periodicSource interval items = delayedSource $ zip (repeat interval) items
 terminationDetector :: IO (TVar Bool, (ConduitM i o (ResourceT IO) r -> ConduitM i o (ResourceT IO) r))
 terminationDetector = do
   terminated <- newTVarIO False
-  return (terminated,
-          addCleanup (\completed -> if not completed then liftIO $ atomically $ writeTVar terminated True else return () ) )
+  return (terminated, makeDetector terminated)
+  where
+    makeDetector terminated orig = bracketP initCompletion setTermination runAction
+      where
+        initCompletion = newTVarIO False
+        runAction v_completed = do
+          ret <- orig
+          liftIO $ atomically $ writeTVar v_completed True
+          return ret
+        setTermination v_completed = atomically $ do
+          completed <- readTVar v_completed
+          writeTVar terminated $ not completed
 
 attachResource :: Source (ResourceT IO) a -> IO (TVar Bool, Source (ResourceT IO) a)
 attachResource src = do
