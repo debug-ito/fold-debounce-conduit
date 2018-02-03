@@ -62,17 +62,29 @@ matrix:
   ##   compiler: ": #stack 7.8.4"
   ##   addons: {apt: {packages: [ghc-7.8.4], sources: [hvr-ghc]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-3"
-    compiler: ": #stack 7.10.2"
-    addons: {apt: {packages: [ghc-7.10.2], sources: [hvr-ghc]}}
+  # - env: BUILD=stack ARGS="--resolver lts-3"
+  #   compiler: ": #stack 7.10.2"
+  #   addons: {apt: {packages: [ghc-7.10.2], sources: [hvr-ghc]}}
+  # 
+  # - env: BUILD=stack ARGS="--resolver lts-5"
+  #   compiler: ": #stack 7.10.3"
+  #   addons: {apt: {packages: [ghc-7.10.3], sources: [hvr-ghc]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-5"
-    compiler: ": #stack 7.10.3"
-    addons: {apt: {packages: [ghc-7.10.3], sources: [hvr-ghc]}}
+  # - env: BUILD=stack ARGS="--resolver lts-7"
+  #   compiler: ": #stack 8.0.1"
+  #   addons: {apt: {packages: [ghc-8.0.1], sources: [hvr-ghc]}}
 
-  - env: BUILD=stack ARGS="--resolver lts-7"
+  - env: BUILD=stack ARGS="--resolver lts-8"
+    compiler: ": #stack 8.0.2"
+    addons: {apt: {packages: [ghc-8.0.2], sources: [hvr-ghc]}}
+
+  - env: BUILD=stack ARGS="--resolver lts-9"
+    compiler: ": #stack 8.0.2"
+    addons: {apt: {packages: [ghc-8.0.2], sources: [hvr-ghc]}}
+
+  - env: BUILD=stack ARGS="--resolver lts-10"
     compiler: ": #stack 8.0.1"
-    addons: {apt: {packages: [ghc-8.0.1], sources: [hvr-ghc]}}
+    addons: {apt: {packages: [ghc-8.2.2], sources: [hvr-ghc]}}
 
 
   # Nightly builds are allowed to fail
@@ -85,16 +97,16 @@ matrix:
   ##   compiler: ": #stack 7.8.4 osx"
   ##   os: osx
 
-  - env: BUILD=stack ARGS="--resolver lts-3"
-    compiler: ": #stack 7.10.2 osx"
+  - env: BUILD=stack ARGS="--resolver lts-8"
+    compiler: ": #stack lts-8 osx"
     os: osx
 
-  - env: BUILD=stack ARGS="--resolver lts-5"
-    compiler: ": #stack 7.10.3 osx"
+  - env: BUILD=stack ARGS="--resolver lts-9"
+    compiler: ": #stack lts-9 osx"
     os: osx
 
-  - env: BUILD=stack ARGS="--resolver lts-7"
-    compiler: ": #stack 8.0.1 osx"
+  - env: BUILD=stack ARGS="--resolver lts-10"
+    compiler: ": #stack lts-10 osx"
     os: osx
 
   - env: BUILD=stack ARGS="--resolver nightly"
