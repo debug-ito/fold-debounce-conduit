@@ -1,5 +1,10 @@
 # Revision history for fold-debounce-conduit
 
+## 0.2.0.2  -- 2018-09-23
+
+* Confirm test with `stm-2.5.0.0`.
+
+
 ## 0.2.0.1  -- 2018-04-02
 
 * Confirm test with `base-4.11.0.0`.
