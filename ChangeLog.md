@@ -1,5 +1,9 @@
 # Revision history for fold-debounce-conduit
 
+## 0.2.0.4  -- 2019-12-30
+
+* Confirm test with `base-4.13.0.0`
+
 ## 0.2.0.3  -- 2018-10-01
 
 * Confirm test with `base-4.12.0.0`
