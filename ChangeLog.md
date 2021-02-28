@@ -1,6 +1,6 @@
 # Revision history for fold-debounce-conduit
 
-## 0.2.0.6  -- ?
+## 0.2.0.6  -- 2021-02-28
 
 * Confirm test with `base-4.15.0.0` (ghc-9.0.1)
 
