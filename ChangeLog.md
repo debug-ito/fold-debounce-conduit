@@ -1,5 +1,9 @@
 # Revision history for fold-debounce-conduit
 
+## 0.2.0.6  -- ?
+
+* Confirm test with `base-4.15.0.0` (ghc-9.0.1)
+
 ## 0.2.0.5  -- 2020-06-21
 
 * Confirm test with `base-4.14.0.0` (ghc-8.10.1)
