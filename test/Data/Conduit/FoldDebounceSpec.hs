@@ -1,19 +1,23 @@
-module Data.Conduit.FoldDebounceSpec (main, spec) where
+module Data.Conduit.FoldDebounceSpec
+    ( main
+    , spec
+    ) where
 
-import Test.Hspec
+import           Test.Hspec
 
-import Control.Applicative ((<$>))
-import Control.Concurrent (threadDelay, myThreadId)
-import Control.Concurrent.STM (atomically, TVar, newTVarIO, writeTVar, readTVar, retry)
-import Control.Monad (forM_, void)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Resource (ResourceT, runResourceT, register)
-import Data.Conduit (ConduitT, (.|), yield, bracketP, runConduit)
-import qualified Data.Conduit.FoldDebounce as F
-import qualified Data.Conduit.List as CL
-import Data.Maybe (isJust)
-import Data.Monoid (Monoid)
-import System.Timeout (timeout)
+import           Control.Applicative          ((<$>))
+import           Control.Concurrent           (myThreadId, threadDelay)
+import           Control.Concurrent.STM       (TVar, atomically, newTVarIO, readTVar, retry,
+                                               writeTVar)
+import           Control.Monad                (forM_, void)
+import           Control.Monad.IO.Class       (liftIO)
+import           Control.Monad.Trans.Resource (ResourceT, register, runResourceT)
+import           Data.Conduit                 (ConduitT, bracketP, runConduit, yield, (.|))
+import qualified Data.Conduit.FoldDebounce    as F
+import qualified Data.Conduit.List            as CL
+import           Data.Maybe                   (isJust)
+import           Data.Monoid                  (Monoid)
+import           System.Timeout               (timeout)
 
 main :: IO ()
 main = hspec spec
@@ -142,4 +146,4 @@ spec = do
       ret `shouldBe` ["ab"]
       released `shouldSatisfyEventually'` (== True)
 
-      
+

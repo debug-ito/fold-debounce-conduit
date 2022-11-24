@@ -1,13 +1,15 @@
-module Main (main) where
+module Main
+    ( main
+    ) where
 
-import Data.Conduit (ConduitT, yield, runConduit, (.|))
-import qualified Data.Conduit.List as CL
-import Data.Void (Void)
-import Control.Concurrent (threadDelay)
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import           Control.Concurrent           (threadDelay)
+import           Control.Monad.IO.Class       (liftIO)
+import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import           Data.Conduit                 (ConduitT, runConduit, yield, (.|))
+import qualified Data.Conduit.List            as CL
+import           Data.Void                    (Void)
 
-import qualified Data.Conduit.FoldDebounce as F
+import qualified Data.Conduit.FoldDebounce    as F
 
 fastSource :: Int -> ConduitT () Int (ResourceT IO) ()
 fastSource max_num = fastStream' 0 where

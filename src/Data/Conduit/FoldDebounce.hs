@@ -2,20 +2,20 @@
 -- Module: Data.Conduit.FoldDebounce
 -- Description: Regulate input traffic from conduit Source with Control.FoldDebounce
 -- Maintainer: Toshio Ito <debug.ito@gmail.com>
--- 
+--
 -- Synopsis:
 --
 -- > module Main (main) where
--- > 
+-- >
 -- > import Data.Conduit (ConduitT, yield, runConduit, (.|))
 -- > import qualified Data.Conduit.List as CL
 -- > import Data.Void (Void)
 -- > import Control.Concurrent (threadDelay)
 -- > import Control.Monad.IO.Class (liftIO)
 -- > import Control.Monad.Trans.Resource (ResourceT, runResourceT)
--- > 
+-- >
 -- > import qualified Data.Conduit.FoldDebounce as F
--- > 
+-- >
 -- > fastSource :: Int -> ConduitT () Int (ResourceT IO) ()
 -- > fastSource max_num = fastStream' 0 where
 -- >   fastStream' count = do
@@ -25,10 +25,10 @@
 -- >       else do
 -- >         liftIO $ threadDelay 100000
 -- >         fastStream' (count + 1)
--- > 
+-- >
 -- > printSink :: Show a => ConduitT a Void (ResourceT IO) ()
 -- > printSink = CL.mapM_ (liftIO . putStrLn . show)
--- > 
+-- >
 -- > main :: IO ()
 -- > main = do
 -- >   putStrLn "-- Before debounce"
@@ -39,7 +39,7 @@
 -- >                              F.def { F.delay = 500000 }
 -- >   putStrLn "-- After debounce"
 -- >   runResourceT $ runConduit $ debouncer (fastSource 10) .| printSink
--- 
+--
 -- Result:
 --
 -- > -- Before debounce
@@ -68,35 +68,36 @@
 -- (specified by 'delay' option).
 --
 -- See "Control.FoldDebounce" for detail.
-module Data.Conduit.FoldDebounce (
-  debounce,
-  -- * Re-exports
-  Args(..),
-  Opts,
-  def,
-  -- ** Accessors for 'Opts'
-  delay,
-  alwaysResetTimer,
-  -- * Preset parameters
-  forStack, forMonoid, forVoid
-) where
+module Data.Conduit.FoldDebounce
+    ( debounce
+      -- * Re-exports
+    , Args (..)
+    , Opts
+    , def
+      -- ** Accessors for 'Opts'
+    , delay
+    , alwaysResetTimer
+      -- * Preset parameters
+    , forStack
+    , forMonoid
+    , forVoid
+    ) where
 
-import Prelude hiding (init)
-import Control.Monad (void)
-import Data.Monoid (Monoid)
-import Data.Void (Void)
+import           Control.Monad                (void)
+import           Data.Monoid                  (Monoid)
+import           Data.Void                    (Void)
+import           Prelude                      hiding (init)
 
-import Control.FoldDebounce (Args(Args,cb,fold,init),
-                             Opts, delay, alwaysResetTimer, def)
-import qualified Control.FoldDebounce as F
-import Data.Conduit (ConduitT, await, (.|), bracketP, yield, runConduit)
-import Control.Monad.Trans.Resource (MonadResource, MonadUnliftIO,
-                                     allocate, register, release, resourceForkIO, runResourceT)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Concurrent.STM (newTChanIO, writeTChan, readTChan,
-                               atomically,
-                               TVar, readTVar, newTVarIO, writeTVar)
+import           Control.Concurrent.STM       (TVar, atomically, newTChanIO, newTVarIO, readTChan,
+                                               readTVar, writeTChan, writeTVar)
+import           Control.FoldDebounce         (Args (Args, cb, fold, init), Opts, alwaysResetTimer,
+                                               def, delay)
+import qualified Control.FoldDebounce         as F
+import           Control.Monad.IO.Class       (MonadIO, liftIO)
+import           Control.Monad.Trans.Class    (lift)
+import           Control.Monad.Trans.Resource (MonadResource, MonadUnliftIO, allocate, register,
+                                               release, resourceForkIO, runResourceT)
+import           Data.Conduit                 (ConduitT, await, bracketP, runConduit, yield, (.|))
 
 -- | Debounce conduit source with "Control.FoldDebounce". The data
 -- stream from the original source (type @i@) is debounced and folded
@@ -130,10 +131,11 @@ debounce args opts src = bracketP initOutTermed finishOutTermed debounceWith
       case mgot of
        OutFinished -> return ()
        OutData got -> yield got >> keepYield out_chan
-      
+
 -- | Internal data type for output channel.
-data OutData o = OutData o
-               | OutFinished
+data OutData o
+  = OutData o
+  | OutFinished
 
 trigSink :: (MonadIO m) => F.Trigger i o -> TVar Bool -> ConduitT i Void m ()
 trigSink trig out_termed = trigSink' where
