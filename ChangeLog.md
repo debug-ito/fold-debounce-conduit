@@ -1,5 +1,10 @@
 # Revision history for fold-debounce-conduit
 
+## 0.2.0.7  -- 2022-11-25
+
+* Confirm test with `base-4.16.4.0` (ghc-9.2.5) and `resourcet-1.3.0`.
+* Use stylish-haskell.
+
 ## 0.2.0.6  -- 2021-02-28
 
 * Confirm test with `base-4.15.0.0` (ghc-9.0.1)
