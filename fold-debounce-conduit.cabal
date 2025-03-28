@@ -9,7 +9,8 @@ description:            Regulate input traffic from conduit Source with Control.
 category:               Conduit
 cabal-version:          2.0
 build-type:             Simple
-extra-source-files:     README.md, ChangeLog.md
+extra-source-files:     README.md
+extra-doc-files:        ChangeLog.md
 homepage:               https://github.com/debug-ito/fold-debounce-conduit
 bug-reports:            https://github.com/debug-ito/fold-debounce-conduit/issues
 
